@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test: El Verbo IR - Sentence Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .word-tile {
+            background-color: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+            margin: 0.25rem;
+            cursor: pointer;
+            display: inline-block;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: all 0.2s;
+            font-weight: 500;
+            color: #374151;
+            user-select: none;
+        }
+        .word-tile:active { transform: scale(0.95); background-color: #f3f4f6; }
+        .word-tile:hover { border-color: #3b82f6; color: #2563eb; transform: translateY(-1px); }
+        
+        .answer-area {
+            min-height: 80px;
+            background-color: #f9fafb;
+            border: 2px dashed #d1d5db;
+            border-radius: 0.75rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            padding: 0.5rem;
+            transition: background-color 0.2s;
+            cursor: pointer;
+        }
+        .answer-area:hover { border-color: #9ca3af; }
+        
+        .bank-area {
+            min-height: 80px;
+            padding: 1rem;
+            background-color: #eef2ff;
+            border-radius: 0.75rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 50;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 90%;
+            max-width: 800px;
+            border-radius: 0.75rem;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- MAIN APP CONTAINER -->
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-5xl overflow-hidden min-h-[700px] relative flex flex-col">
+        
+        <!-- HEADER -->
+        <header class="bg-indigo-700 text-white p-6 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold">Test: El Verbo "Ir"</h1>
+                <p class="text-indigo-200 text-sm">Sentence Construction & Translation</p>
+            </div>
+            <div id="cheating-alert" class="hidden bg-red-600 text-white px-3 py-1 rounded text-sm font-bold animate-pulse">
+                <i class="fas fa-exclamation-triangle mr-2"></i>Focus Lost!
+            </div>
+        </header>
+
+        <!-- CONTENT AREA -->
+        <main class="flex-grow p-8 relative">
+            
+            <!-- VIEW 1: REGISTRATION -->
+            <div id="view-reg" class="fade-in max-w-md mx-auto mt-10">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Student Registration</h2>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2">First Name</label>
+                            <input type="text" id="reg-first" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2">Last Name</label>
+                            <input type="text" id="reg-last" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Period</label>
+                        <select id="reg-period" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                            <option value="" disabled selected>Select Period</option>
+                            <option value="1st">1st Period</option>
+                            <option value="A1">A1</option>
+                            <option value="A2">A2</option>
+                            <option value="B3">B3</option>
+                            <option value="5th">5th Period</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">School Email</label>
+                        <input type="email" id="reg-email" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <button onclick="attemptStart()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition mt-4 shadow-lg">
+                        Start Test <i class="fas fa-play ml-2"></i>
+                    </button>
+                    <p id="reg-error" class="text-red-500 text-center text-sm hidden font-bold"></p>
+                </div>
+            </div>
+
+            <!-- VIEW 2: QUIZ -->
+            <div id="view-quiz" class="hidden fade-in h-full flex flex-col">
+                <div class="mb-6">
+                    <div class="flex justify-between text-sm text-gray-500 mb-1">
+                        <span>Question <span id="q-current">1</span> of 50</span>
+                        <span>Progress</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div id="progress-bar" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-300" style="width: 2%"></div>
+                    </div>
+                </div>
+
+                <div class="flex-grow flex flex-col justify-center max-w-3xl mx-auto w-full">
+                    <div class="text-center mb-8">
+                        <p class="text-gray-500 uppercase tracking-wider text-sm font-bold mb-2">Translate this sentence</p>
+                        <h2 id="q-prompt" class="text-3xl md:text-4xl text-gray-800 font-bold leading-tight">...</h2>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="text-xs text-gray-400 font-bold uppercase ml-1">Your Answer (Click words to remove)</label>
+                        <div id="answer-zone" class="answer-area"></div>
+                    </div>
+
+                    <div class="mb-8">
+                        <label class="text-xs text-gray-400 font-bold uppercase ml-1">Word Bank (Click words to add)</label>
+                        <div id="bank-zone" class="bank-area shadow-inner"></div>
+                    </div>
+
+                    <div class="flex justify-end pt-4 border-t border-gray-100">
+                        <button onclick="checkAndNext()" class="bg-gray-800 hover:bg-black text-white px-8 py-3 rounded-lg font-bold shadow-lg transition transform hover:-translate-y-0.5">
+                            Next <i class="fas fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 3: RESULTS -->
+            <div id="view-results" class="hidden fade-in text-center mt-10">
+                <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i class="fas fa-check-circle text-5xl text-green-600"></i>
+                </div>
+                <h2 class="text-3xl font-bold text-gray-800 mb-2">Test Completed!</h2>
+                <p class="text-gray-600 mb-8">Your results file has been downloaded automatically.</p>
+                
+                <div class="bg-indigo-50 rounded-xl p-8 max-w-sm mx-auto mb-8 border border-indigo-100">
+                    <p class="text-indigo-600 font-bold uppercase text-sm tracking-wide">Final Score</p>
+                    <p class="text-6xl font-bold text-gray-800 my-2"><span id="final-score">0</span>%</p>
+                </div>
+
+                <div class="max-w-md mx-auto bg-yellow-50 border border-yellow-200 p-4 rounded-lg mb-6">
+                    <p class="text-yellow-800 font-bold text-sm"><i class="fas fa-exclamation-triangle mr-2"></i>IMPORTANT</p>
+                    <p class="text-yellow-700 text-sm">Please send the downloaded CSV file to your teacher immediately.</p>
+                </div>
+                
+                <button onclick="downloadCSV()" class="text-indigo-600 underline text-sm">Download again if blocked</button>
+            </div>
+
+            <!-- VIEW 4: ADMIN LOGIN -->
+            <div id="view-admin-login" class="hidden fade-in max-w-sm mx-auto mt-20">
+                <div class="bg-gray-800 p-8 rounded-xl shadow-2xl text-white">
+                    <h2 class="text-xl font-bold mb-4 flex items-center"><i class="fas fa-lock mr-3 text-indigo-400"></i>Admin Access</h2>
+                    <input type="password" id="admin-pass" class="w-full bg-gray-700 border border-gray-600 rounded px-4 py-2 text-white mb-4 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Enter Password">
+                    <button onclick="adminLogin()" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 rounded transition">Access Dashboard</button>
+                    <p id="login-msg" class="text-red-400 text-sm mt-2 hidden">Invalid password</p>
+                    <button onclick="showReg()" class="w-full text-center text-gray-400 text-xs mt-4 hover:text-white underline">Back to Student View</button>
+                </div>
+            </div>
+
+            <!-- VIEW 5: ADMIN DASHBOARD -->
+            <div id="view-dashboard" class="hidden fade-in h-full flex flex-col">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Teacher Dashboard</h2>
+                    <button onclick="location.reload()" class="text-red-600 hover:text-red-800 text-sm font-bold">Logout</button>
+                </div>
+
+                <div id="drop-zone" class="border-3 border-dashed border-gray-300 rounded-xl p-8 text-center bg-gray-50 hover:bg-white hover:border-indigo-400 transition cursor-pointer mb-8 group">
+                    <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 group-hover:text-indigo-500 mb-3 transition"></i>
+                    <p class="text-gray-600 font-medium">Drag & Drop Student CSV Files Here</p>
+                    <input type="file" id="csv-input" multiple class="hidden" accept=".csv">
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-4 gap-4 mb-8">
+                    <div class="bg-white p-4 rounded-lg shadow border border-gray-100">
+                        <p class="text-xs text-gray-500 font-bold uppercase">Total Students</p>
+                        <p class="text-2xl font-bold text-gray-800" id="stat-count">0</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow border border-gray-100">
+                        <p class="text-xs text-gray-500 font-bold uppercase">Class Average</p>
+                        <p class="text-2xl font-bold text-indigo-600" id="stat-avg">0%</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow border border-gray-100 col-span-2">
+                        <p class="text-xs text-gray-500 font-bold uppercase">Top 3 Most Missed Questions</p>
+                        <ul id="missed-list" class="text-sm text-gray-700 mt-1 space-y-1">
+                            <li class="italic text-gray-400">Upload data to see stats</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Gradebook Table -->
+                <div class="flex-grow overflow-auto bg-white rounded-lg shadow border border-gray-200">
+                    <table class="min-w-full text-sm text-left">
+                        <thead class="bg-gray-100 text-gray-600 uppercase text-xs sticky top-0">
+                            <tr>
+                                <th class="py-3 px-4 font-bold">Period</th>
+                                <th class="py-3 px-4 font-bold">Name</th>
+                                <th class="py-3 px-4 font-bold">Email</th>
+                                <th class="py-3 px-4 font-bold text-center">Alerts</th>
+                                <th class="py-3 px-4 font-bold text-right">Score</th>
+                            </tr>
+                        </thead>
+                        <tbody id="gradebook-body" class="divide-y divide-gray-100 cursor-pointer">
+                            <!-- Rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="bg-gray-50 p-4 border-t text-center">
+            <button onclick="showAdminLogin()" class="text-xs text-gray-400 hover:text-indigo-600 font-bold uppercase tracking-wider">Teacher Admin Panel</button>
+        </footer>
+    </div>
+
+    <!-- STUDENT DETAIL MODAL -->
+    <div id="student-modal" class="modal">
+        <div class="modal-content shadow-2xl relative">
+            <span onclick="closeModal()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 cursor-pointer text-2xl">&times;</span>
+            <h2 id="modal-title" class="text-2xl font-bold mb-1">Student Details</h2>
+            <p id="modal-subtitle" class="text-gray-500 mb-6">Performance Breakdown</p>
+            
+            <div class="overflow-y-auto max-h-[60vh]">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="py-2 px-4 text-left">#</th>
+                            <th class="py-2 px-4 text-left">Question</th>
+                            <th class="py-2 px-4 text-center">Time (sec)</th>
+                            <th class="py-2 px-4 text-center">Result</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modal-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- 1. DATA: 50 QUESTIONS (With IDs for Analysis) ---
+        const questionsRaw = [
+            { id: 1, q: "I go to the park.", a: "Yo voy al parque", d: ["va", "a"] },
+            { id: 2, q: "You (informal) go to the library.", a: "Tú vas a la biblioteca", d: ["voy", "el"] },
+            { id: 3, q: "She goes to the school.", a: "Ella va a la escuela", d: ["van", "al"] },
+            { id: 4, q: "We go to the beach.", a: "Nosotros vamos a la playa", d: ["vais", "el"] },
+            { id: 5, q: "They go to the museum.", a: "Ellos van al museo", d: ["vamos", "a"] },
+            { id: 6, q: "I go home.", a: "Yo voy a casa", d: ["va", "la"] },
+            { id: 7, q: "He goes to the gym.", a: "Él va al gimnasio", d: ["vas", "a"] },
+            { id: 8, q: "You all (Ustedes) go to the party.", a: "Ustedes van a la fiesta", d: ["vamos", "el"] },
+            { id: 9, q: "The student goes to the class.", a: "El estudiante va a la clase", d: ["van", "al"] },
+            { id: 10, q: "My friends go to the mall.", a: "Mis amigos van al centro comercial", d: ["va", "a"] },
+            { id: 11, q: "I go to the store.", a: "Yo voy a la tienda", d: ["vas", "el"] },
+            { id: 12, q: "We go to the movies.", a: "Nosotros vamos al cine", d: ["voy", "a"] },
+            { id: 13, q: "Where are you going?", a: "¿ Adónde vas ?", d: ["va", "a"] },
+            { id: 14, q: "I go to the church on Sundays.", a: "Yo voy a la iglesia los domingos", d: ["vamos", "al"] },
+            { id: 15, q: "She goes to work.", a: "Ella va al trabajo", d: ["van", "a"] },
+            { id: 16, q: "I go to the restaurant.", a: "Yo voy al restaurante", d: ["a", "la"] },
+            { id: 17, q: "He goes to the pool.", a: "Él va a la piscina", d: ["al", "el"] },
+            { id: 18, q: "We go to the park.", a: "Vamos al parque", d: ["a", "el"] },
+            { id: 19, q: "They go to the house.", a: "Ellos van a la casa", d: ["al", "del"] },
+            { id: 20, q: "You go to the concert.", a: "Tú vas al concierto", d: ["a", "la"] },
+            { id: 21, q: "I go to the office.", a: "Voy a la oficina", d: ["al", "el"] },
+            { id: 22, q: "She goes to the market.", a: "Ella va al mercado", d: ["a", "la"] },
+            { id: 23, q: "We go to the bathroom.", a: "Vamos al baño", d: ["a", "la"] },
+            { id: 24, q: "They go to the kitchen.", a: "Ellos van a la cocina", d: ["al", "el"] },
+            { id: 25, q: "You all go to the garden.", a: "Ustedes van al jardín", d: ["a", "la"] },
+            { id: 26, q: "I am going to eat pizza.", a: "Yo voy a comer pizza", d: ["como", "al"] },
+            { id: 27, q: "She is going to study.", a: "Ella va a estudiar", d: ["estudia", "la"] },
+            { id: 28, q: "We are going to play soccer.", a: "Vamos a jugar al fútbol", d: ["jugamos", "el"] },
+            { id: 29, q: "They are going to swim.", a: "Ellos van a nadar", d: ["nadan", "al"] },
+            { id: 30, q: "Are you going to read?", a: "¿ Vas a leer ?", d: ["lees", "voy"] },
+            { id: 31, q: "I am going to sleep.", a: "Yo voy a dormir", d: ["duermo", "al"] },
+            { id: 32, q: "He is going to run.", a: "Él va a correr", d: ["corre", "la"] },
+            { id: 33, q: "You all are going to watch TV.", a: "Ustedes van a mirar la televisión", d: ["miran", "al"] },
+            { id: 34, q: "I am going to write a letter.", a: "Voy a escribir una carta", d: ["escribo", "el"] },
+            { id: 35, q: "We are going to listen to music.", a: "Vamos a escuchar música", d: ["escuchamos", "la"] },
+            { id: 36, q: "She is going to dance.", a: "Ella va a bailar", d: ["baila", "al"] },
+            { id: 37, q: "They are going to speak Spanish.", a: "Ellos van a hablar español", d: ["hablan", "la"] },
+            { id: 38, q: "I am going to buy a car.", a: "Voy a comprar un coche", d: ["compro", "el"] },
+            { id: 39, q: "Are you going to cook?", a: "¿ Vas a cocinar ?", d: ["cocinas", "va"] },
+            { id: 40, q: "We are going to travel.", a: "Vamos a viajar", d: ["viajamos", "la"] },
+            { id: 41, q: "He is going to sing.", a: "Él va a cantar", d: ["canta", "al"] },
+            { id: 42, q: "They are going to open the door.", a: "Ellos van a abrir la puerta", d: ["abren", "el"] },
+            { id: 43, q: "I am going to drink water.", a: "Voy a beber agua", d: ["bebo", "la"] },
+            { id: 44, q: "She is going to live in Spain.", a: "Ella va a vivir en España", d: ["vive", "al"] },
+            { id: 45, q: "We are going to learn.", a: "Vamos a aprender", d: ["aprendemos", "el"] },
+            { id: 46, q: "I am not going to work.", a: "No voy a trabajar", d: ["va", "trabajo"] },
+            { id: 47, q: "She is not going to eat.", a: "Ella no va a comer", d: ["come", "al"] },
+            { id: 48, q: "We are not going to go.", a: "No vamos a ir", d: ["van", "voy"] },
+            { id: 49, q: "They are not going to study today.", a: "Ellos no van a estudiar hoy", d: ["estudian", "al"] },
+            { id: 50, q: "Are you not going to play?", a: "¿ No vas a jugar ?", d: ["juegas", "va"] }
+        ];
+
+        // --- 2. STATE MANAGEMENT ---
+        let state = {
+            student: { first: '', last: '', period: '', email: '' },
+            currentQIndex: 0,
+            score: 0,
+            answers: [], // Stores {id: 1, correct: true, time: 1.5}
+            activeQuestions: [], // Shuffled copy
+            startTime: null,
+            questionStartTime: null,
+            cheatingCount: 0
+        };
+
+        const elViews = {
+            reg: document.getElementById('view-reg'),
+            quiz: document.getElementById('view-quiz'),
+            results: document.getElementById('view-results'),
+            login: document.getElementById('view-admin-login'),
+            dash: document.getElementById('view-dashboard')
+        };
+        
+        // --- 3. ANTI-CHEATING ---
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && !elViews.quiz.classList.contains('hidden')) {
+                handleCheatingEvent();
+            }
+        });
+
+        window.addEventListener('blur', () => {
+            if (!elViews.quiz.classList.contains('hidden')) {
+                handleCheatingEvent();
+            }
+        });
+
+        function handleCheatingEvent() {
+            state.cheatingCount++;
+            const alertEl = document.getElementById('cheating-alert');
+            alertEl.classList.remove('hidden');
+            setTimeout(() => alertEl.classList.add('hidden'), 3000);
+        }
+
+        function showView(viewName) {
+            Object.values(elViews).forEach(el => el.classList.add('hidden'));
+            elViews[viewName].classList.remove('hidden');
+        }
+
+        // --- 4. LOGIC ---
+        function attemptStart() {
+            const first = document.getElementById('reg-first').value.trim();
+            const last = document.getElementById('reg-last').value.trim();
+            const period = document.getElementById('reg-period').value;
+            const email = document.getElementById('reg-email').value.trim().toLowerCase();
+            const errorEl = document.getElementById('reg-error');
+
+            if (!first || !last || !period || !email) {
+                errorEl.textContent = "Please fill in all fields.";
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            if (localStorage.getItem(`ir_test_taken_${email}`)) {
+                errorEl.textContent = "This email has already submitted a test.";
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            state.student = { first, last, period, email };
+            state.cheatingCount = 0;
+            state.startTime = new Date();
+            errorEl.classList.add('hidden');
+            
+            // Shuffle Questions
+            state.activeQuestions = [...questionsRaw];
+            for (let i = state.activeQuestions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [state.activeQuestions[i], state.activeQuestions[j]] = [state.activeQuestions[j], state.activeQuestions[i]];
+            }
+
+            startQuiz();
+        }
+
+        function startQuiz() {
+            state.currentQIndex = 0;
+            state.score = 0;
+            state.answers = [];
+            showView('quiz');
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const qData = state.activeQuestions[state.currentQIndex];
+            state.questionStartTime = Date.now();
+            
+            document.getElementById('q-current').textContent = state.currentQIndex + 1;
+            document.getElementById('progress-bar').style.width = `${((state.currentQIndex) / questionsRaw.length) * 100}%`;
+            document.getElementById('q-prompt').textContent = qData.q;
+            
+            const correctWords = qData.a.split(' ');
+            const allWords = [...correctWords, ...qData.d];
+            
+            for (let i = allWords.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [allWords[i], allWords[j]] = [allWords[j], allWords[i]];
+            }
+
+            const answerZone = document.getElementById('answer-zone');
+            const bankZone = document.getElementById('bank-zone');
+            
+            answerZone.innerHTML = ''; 
+            bankZone.innerHTML = '';   
+
+            allWords.forEach(word => {
+                const tile = document.createElement('div');
+                tile.className = 'word-tile';
+                tile.textContent = word;
+                tile.setAttribute('data-word', word);
+                tile.onclick = function() {
+                    if (tile.parentElement === bankZone) answerZone.appendChild(tile);
+                    else bankZone.appendChild(tile);
+                };
+                bankZone.appendChild(tile);
+            });
+        }
+
+        function checkAndNext() {
+            const endTime = Date.now();
+            const timeTaken = ((endTime - state.questionStartTime) / 1000).toFixed(1);
+            
+            const qData = state.activeQuestions[state.currentQIndex];
+            const answerZone = document.getElementById('answer-zone');
+            const userWords = Array.from(answerZone.children).map(el => el.getAttribute('data-word'));
+            const userSentence = userWords.join(' ');
+            const isCorrect = userSentence.trim() === qData.a.trim();
+            
+            if (isCorrect) state.score++;
+            
+            state.answers.push({
+                id: qData.id,
+                correct: isCorrect,
+                time: timeTaken
+            });
+
+            state.currentQIndex++;
+            if (state.currentQIndex < state.activeQuestions.length) {
+                loadQuestion();
+            } else {
+                endQuiz();
+            }
+        }
+
+        function endQuiz() {
+            showView('results');
+            const percentage = Math.round((state.score / questionsRaw.length) * 100);
+            document.getElementById('final-score').textContent = percentage;
+            
+            localStorage.setItem(`ir_test_taken_${state.student.email}`, 'true');
+            
+            // Auto download
+            setTimeout(downloadCSV, 500);
+        }
+
+        function downloadCSV() {
+            const s = state.student;
+            const percentage = Math.round((state.score / questionsRaw.length) * 100);
+            const date = new Date().toLocaleDateString();
+            
+            // Serialize details: id:correct:time|id:correct:time
+            const details = state.answers.map(a => `${a.id}:${a.correct?1:0}:${a.time}`).join('|');
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            let header = "FirstName,LastName,Period,Email,Date,ScorePct,RawScore,CheatingCount,Details";
+            let row = `${s.first},${s.last},${s.period},${s.email},${date},${percentage},${state.score},${state.cheatingCount},${details}`;
+
+            csvContent += header + "\n" + row;
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Test_Ir_${s.last}_${s.first}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // --- 5. ADMIN PANEL ---
+        function showAdminLogin() { showView('login'); }
+        function showReg() { showView('reg'); }
+
+        function adminLogin() {
+            const pass = document.getElementById('admin-pass').value;
+            if (pass === 'admin123') {
+                showView('dash');
+                document.getElementById('login-msg').classList.add('hidden');
+            } else {
+                document.getElementById('login-msg').classList.remove('hidden');
+            }
+        }
+
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('csv-input');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-indigo-500', 'bg-indigo-50'); });
+        dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('border-indigo-500', 'bg-indigo-50'); });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-indigo-500', 'bg-indigo-50');
+            handleFiles(e.dataTransfer.files);
+        });
+        fileInput.addEventListener('change', () => handleFiles(fileInput.files));
+
+        function handleFiles(files) {
+            const students = [];
+            let processed = 0;
+
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const text = e.target.result;
+                    const rows = text.split('\n');
+                    if (rows.length >= 2) {
+                        const cols = rows[1].split(','); 
+                        if(cols.length >= 9) { // Ensure updated format
+                            students.push({
+                                first: cols[0],
+                                last: cols[1],
+                                period: cols[2],
+                                email: cols[3],
+                                score: parseInt(cols[5]),
+                                cheating: parseInt(cols[7]),
+                                details: cols[8] // string of pipe-separated data
+                            });
+                        }
+                    }
+                    processed++;
+                    if (processed === files.length) updateDashboard(students);
+                };
+                reader.readAsText(file);
+            });
+        }
+
+        function updateDashboard(students) {
+            // Basic Stats
+            const count = students.length;
+            const totalScore = students.reduce((sum, s) => sum + s.score, 0);
+            const avg = count ? Math.round(totalScore / count) : 0;
+            
+            document.getElementById('stat-count').textContent = count;
+            document.getElementById('stat-avg').textContent = avg + "%";
+
+            // Most Missed Analysis
+            const missCounts = {}; // { qId: count }
+            students.forEach(s => {
+                if(s.details) {
+                    const attempts = s.details.split('|');
+                    attempts.forEach(att => {
+                        const [id, correct, time] = att.split(':');
+                        if (correct === '0') {
+                            missCounts[id] = (missCounts[id] || 0) + 1;
+                        }
+                    });
+                }
+            });
+
+            // Sort misses
+            const sortedMisses = Object.entries(missCounts).sort((a,b) => b[1] - a[1]).slice(0, 3);
+            const missedListEl = document.getElementById('missed-list');
+            missedListEl.innerHTML = '';
+            
+            if (sortedMisses.length === 0) {
+                missedListEl.innerHTML = '<li>No questions missed yet!</li>';
+            } else {
+                sortedMisses.forEach(([id, count]) => {
+                    const qObj = questionsRaw.find(q => q.id == id);
+                    if (qObj) {
+                        missedListEl.innerHTML += `<li class="border-b pb-1">
+                            <span class="font-bold text-red-500">${count} misses:</span> 
+                            ${qObj.q} <span class="text-xs text-gray-500">(${qObj.a})</span>
+                        </li>`;
+                    }
+                });
+            }
+
+            // Table
+            const tbody = document.getElementById('gradebook-body');
+            tbody.innerHTML = '';
+
+            students.sort((a, b) => {
+                if (a.period < b.period) return -1;
+                if (a.period > b.period) return 1;
+                return a.last.localeCompare(b.last);
+            });
+
+            students.forEach((s, idx) => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b hover:bg-gray-50 transition";
+                
+                // Cheating Alert Icon
+                const alertHtml = s.cheating > 0 
+                    ? `<span class="text-red-500 font-bold" title="${s.cheating} focus lost events"><i class="fas fa-exclamation-triangle"></i> ${s.cheating}</span>` 
+                    : '<span class="text-green-500"><i class="fas fa-check"></i></span>';
+
+                tr.innerHTML = `
+                    <td class="py-3 px-4 text-gray-600">${s.period}</td>
+                    <td class="py-3 px-4 font-medium text-gray-800">${s.last}, ${s.first}</td>
+                    <td class="py-3 px-4 text-gray-500 text-xs">${s.email}</td>
+                    <td class="py-3 px-4 text-center">${alertHtml}</td>
+                    <td class="py-3 px-4 text-right font-bold ${s.score >= 70 ? 'text-green-600' : 'text-red-600'}">${s.score}%</td>
+                `;
+                
+                // Add click handler for details
+                tr.onclick = () => openStudentModal(s);
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- 6. STUDENT MODAL ---
+        const modal = document.getElementById('student-modal');
+        
+        function openStudentModal(student) {
+            document.getElementById('modal-title').textContent = `${student.first} ${student.last}`;
+            document.getElementById('modal-subtitle').textContent = `Period: ${student.period} | Score: ${student.score}% | Alerts: ${student.cheating}`;
+            
+            const tbody = document.getElementById('modal-body');
+            tbody.innerHTML = '';
+
+            if (student.details) {
+                const attempts = student.details.split('|');
+                // We need to map these back to questions. 
+                // Since user CSV order is shuffled, we rely on ID.
+                
+                // Sort by ID to make it readable in list
+                attempts.sort((a,b) => parseInt(a.split(':')[0]) - parseInt(b.split(':')[0]));
+
+                attempts.forEach(att => {
+                    const [id, correct, time] = att.split(':');
+                    const qObj = questionsRaw.find(q => q.id == id);
+                    
+                    if (qObj) {
+                        const tr = document.createElement('tr');
+                        tr.className = "border-b";
+                        tr.innerHTML = `
+                            <td class="py-2 px-4 text-xs text-gray-500">${id}</td>
+                            <td class="py-2 px-4">
+                                <p class="text-sm font-bold text-gray-700">${qObj.q}</p>
+                                <p class="text-xs text-gray-500">${qObj.a}</p>
+                            </td>
+                            <td class="py-2 px-4 text-center text-sm">${time}s</td>
+                            <td class="py-2 px-4 text-center">
+                                ${correct === '1' ? '<span class="text-green-600 font-bold">✓</span>' : '<span class="text-red-600 font-bold">✗</span>'}
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    }
+                });
+            }
+
+            modal.style.display = "block";
+        }
+
+        function closeModal() {
+            modal.style.display = "none";
+        }
+
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+</html>
